@@ -39,6 +39,7 @@ def _exec(cur, g):
     what, val = g.next()
     while True:
         if what == DONE:
+            g.close()
             return val
         elif what == RECURSE:
             try:
