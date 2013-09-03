@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 from db_txn import db_execute, db_insert, db_query, db_result, for_recurse, \
                    in_txn
 
@@ -41,5 +43,4 @@ class test_pool(object):
 row = update_db(test_pool())
 a, b = query_db(test_pool(), row)
 
-print 'row selected: a =', a, ', b =', b
-
+print('row selected: a =', a, ', b =', b)

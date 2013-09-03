@@ -35,39 +35,51 @@ def for_recurse(f):
         return db_recurse(f(*args, **kwargs))
     return wrapper
 
-def _exec(cur, g):
-    what, val = g.next()
-    while True:
-        if what == DONE:
-            g.close()
-            return val
-        elif what == RECURSE:
-            try:
-                r = _exec(cur, val)
-            except StopIteration:
-                r = None
-            except Exception as e:
-                what, val = g.throw(type(e), e)
-                continue
-            what, val = g.send(r)
-        else:
-            sql, args = val
-            try:
-                cur.execute(sql, args)
-            except Exception as e:
-                what, val = g.throw(type(e), e)
-                continue
+class _db_yielded(object):
+    def update(self, what, val):
+        self.what = what
+        self.val = val
 
-            rowc = cur.rowcount
-            rs = None
-            if what == QUERY:
-                rows = cur.fetchall()
-                cols = [c[0] for c in cur.description]
-                nt = namedtuple('_', cols)
-                rs = [nt(*list(r)) for r in rows]
-            elif what == INSERT:
-                rs = cur.lastrowid
-            what, val = g.send((rowc, rs))
+class _NextIteration(BaseException):
+    pass
+
+def _exec(cur, g):
+    yd = _db_yielded()
+    yd.update(*g.next())
+    def _run_for_gen(f, *args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except Exception as e:
+            yd.update(g.throw(type(e), e))
+            raise _NextIteration()
+
+    while True:
+        try:
+            what, val = yd.what, yd.val
+            if what == DONE:
+                g.close()
+                return val
+            elif what == RECURSE:
+                try:
+                    r = _run_for_gen(_exec, cur, val)
+                except StopIteration:
+                    r = None
+                yd.update(*g.send(r))
+            else:
+                sql, args = val
+                _run_for_gen(cur.execute, sql, args)
+                rowc = cur.rowcount
+                rs = None
+                if what == QUERY:
+                    rows = _run_for_gen(cur.fetchall)
+                    cols = [c[0] for c in cur.description]
+                    nt = namedtuple('_', cols)
+                    rs = [nt(*list(r)) for r in rows]
+                elif what == INSERT:
+                    rs = cur.lastrowid
+                yd.update(*g.send((rowc, rs)))
+        except _NextIteration:
+            pass
 
 def db_txn(pool, gen, *args, **kwargs):
     g = gen(*args, **kwargs)
