@@ -38,7 +38,6 @@ class test_pool(object):
     def connection(self):
         return MySQLdb.connect(user='test', db='test')
 
-# row = insert_db(test_pool())
 row = update_db(test_pool())
 a, b = query_db(test_pool(), row)
 
