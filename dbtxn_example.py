@@ -1,4 +1,5 @@
-from db_txn import db_execute, db_insert, db_query, db_result, db_txn
+from db_txn import db_execute, db_insert, db_query, db_result, for_recurse, \
+                   in_txn
 
 import MySQLdb
 
@@ -12,16 +13,21 @@ import MySQLdb
     CREATE TABLE test (id INT PRIMARY KEY AUTO_INCREMENT, a INT, b VARCHAR(15));
 '''
 
+@for_recurse
 def insert_db():
     row_count, row_id = yield db_insert('INSERT INTO test(a, b) VALUES(%s, %s)',
                                         1, '2')
     assert row_count > 0
     yield db_result(row_id)
 
-def update_db(row):
+@in_txn
+def update_db():
+    row = yield insert_db()
     row_count, _ = yield db_execute('UPDATE test SET a = 3 WHERE id = %s', row)
     assert row_count > 0
+    yield db_result(row)
 
+@in_txn
 def query_db(row):
     row_count, rows = yield db_query('SELECT a, b FROM test WHERE id = %s', row)
     assert row_count > 0
@@ -32,9 +38,9 @@ class test_pool(object):
     def connection(self):
         return MySQLdb.connect(user='test', db='test')
 
-row = db_txn(test_pool(), insert_db)
-db_txn(test_pool(), update_db, row)
-a, b = db_txn(test_pool(), query_db, row)
+# row = insert_db(test_pool())
+row = update_db(test_pool())
+a, b = query_db(test_pool(), row)
 
 print 'row selected: a =', a, ', b =', b
 
