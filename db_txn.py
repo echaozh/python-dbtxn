@@ -45,7 +45,7 @@ class _NextIteration(BaseException):
 
 def _exec(cur, g):
     yd = _db_yielded()
-    yd.update(*g.next())
+    yd.update(*next(g))
     def _run_for_gen(f, *args, **kwargs):
         try:
             return f(*args, **kwargs)
@@ -75,6 +75,7 @@ def _exec(cur, g):
                     cols = [c[0] for c in cur.description]
                     nt = namedtuple('_', cols)
                     rs = [nt(*list(r)) for r in rows]
+                    rowc = len(rs)
                 elif what == INSERT:
                     rs = cur.lastrowid
                 yd.update(*g.send((rowc, rs)))
