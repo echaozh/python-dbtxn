@@ -1,4 +1,5 @@
 from collections import namedtuple
+from contextlib import closing
 from functools import partial
 
 
@@ -84,23 +85,20 @@ def _exec(cur, g):
 
 def db_txn(pool, gen, *args, **kwargs):
     g = gen(*args, **kwargs)
-    conn = pool.connection()
-    cur = conn.cursor()
-    commit = True
-    try:
-        return _exec(cur, g)
-    except StopIteration:  # no val to return
-        pass
-    except:
-        commit = False
-        raise
-    finally:
-        cur.close()
-        if commit:
+    with closing(pool.connection()) as conn:
+        try:
+            conn.begin()
+        except AttributeError:
+            pass
+
+        try:
+            with closing(conn.cursor()) as cur:
+                res = _exec(cur, g)
+                conn.commit()
+                return res
+        except StopIteration:  # no val to return
             conn.commit()
-        else:
-            conn.rollback()
-        conn.close()
+            return None
 
 def in_txn(f):
     def wrapper(pool, *args, **kwargs):
