@@ -27,8 +27,8 @@ db_query = partial(db_input, QUERY)
 db_execute = partial(db_input, EXECUTE)
 db_insert = partial(db_input, INSERT)
 
-def db_txn(pool, gen):
-    g = gen()
+def db_txn(pool, gen, *args, **kwargs):
+    g = gen(*args, **kwargs)
     conn = pool.connection()
     try:
         cur = conn.cursor()
