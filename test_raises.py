@@ -11,6 +11,11 @@ def buggy_gen():
     raise ValueError()
     yield 0
 
+def test_gen_raises(pool):
+    with raises(ValueError):
+        buggy_gen(pool)
+        assert pool.conns == 0
+
 @for_recurse
 def buggy_recur():
     raise ValueError()
@@ -21,16 +26,15 @@ def call_buggy():
     with raises(ValueError):
         yield buggy_recur()
 
+def test_recur_raises(pool):
+    call_buggy(pool)
+    assert pool.conns == 0
+
 @in_txn
 def bad_sql():
     with raises(OperationalError):
         yield db_execute('bad sql')
 
-def test_raises(pool):
-    with raises(ValueError):
-        buggy_gen(pool)
-        assert pool.conns == 0
-
-    call_buggy(pool)
+def test_bad_sql(pool):
     bad_sql(pool)
     assert pool.conns == 0
