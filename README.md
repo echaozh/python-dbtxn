@@ -58,5 +58,5 @@ def outer_generator(args):
 
 Decorates a SQL generator to be directly callable within another generator.
 
-dbtxn_example.py demonstrates the use of all functions and decorators defined in
+test_success.py demonstrates the use of all functions and decorators defined in
 the library.
