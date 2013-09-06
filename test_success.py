@@ -27,8 +27,9 @@ def delete_row(row):
 def query_row(row):
     row_count, rows = yield db_query('SELECT a, b FROM test WHERE id = ?', row)
     assert row_count == 1
-    row = rows[0]
-    yield db_result(row.a, row.b)
+    r = rows[0]
+    yield delete_row(row)
+    yield db_result(r.a, r.b)
 
 def test_success(pool):
     row = update_row(pool)
