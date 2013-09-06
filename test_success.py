@@ -18,6 +18,11 @@ def update_row():
     assert row_count == 1
     yield db_result(row)
 
+@for_recurse
+def delete_row(row):
+    row_count, _ = yield db_execute('DELETE FROM test WHERE id = ?', row)
+    assert row_count == 1
+
 @in_txn
 def query_row(row):
     row_count, rows = yield db_query('SELECT a, b FROM test WHERE id = ?', row)
