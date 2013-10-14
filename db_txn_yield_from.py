@@ -1,3 +1,13 @@
+def __test_for_yield_from():
+    try:
+        eval('def f(): yield from f()')
+        return True
+    except SyntaxError:
+        return False
+
+if __test_for_yield_from:
+    raise ImportError('requires yield from expression to work')
+
 from collections import namedtuple
 from contextlib import closing
 from functools import partial
