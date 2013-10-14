@@ -1,4 +1,7 @@
-from db_txn import db_execute, in_txn, for_recurse
+import sys
+sys.path.append('../')
+
+from db_txn_yield_from import db_execute, in_txn
 
 from test_dbtxn import pool
 
@@ -16,7 +19,6 @@ def test_gen_raises(pool):
         buggy_gen(pool)
         assert pool.conns == 0
 
-@for_recurse
 def buggy_recur():
     raise ValueError()
     yield 0
@@ -24,7 +26,7 @@ def buggy_recur():
 @in_txn
 def call_buggy():
     with raises(ValueError):
-        yield buggy_recur()
+        yield from buggy_recur()
 
 def test_recur_raises(pool):
     call_buggy(pool)

@@ -36,27 +36,23 @@ def for_recurse(f):
         return db_recurse(f(*args, **kwargs))
     return wrapper
 
-class _db_yielded(object):
-    def update(self, what, val):
-        self.what = what
-        self.val = val
-
 class _NextIteration(BaseException):
-    pass
+    def __init__(value):
+        super(_NextIteration, self).__init__()
+        self.value = value
 
 def _exec(cur, g):
-    yd = _db_yielded()
-    yd.update(*next(g))
     def _run_for_gen(f, *args, **kwargs):
         try:
             return f(*args, **kwargs)
+        except StopIteration:
+            raise
         except Exception as e:
-            yd.update(g.throw(type(e), e))
-            raise _NextIteration()
+            raise _NextIteration(g.throw(type(e), e))
 
+    what, val = next(g)
     while True:
         try:
-            what, val = yd.what, yd.val
             if what == DONE:
                 g.close()
                 return val
@@ -65,7 +61,7 @@ def _exec(cur, g):
                     r = _run_for_gen(_exec, cur, val)
                 except StopIteration:
                     r = None
-                yd.update(*g.send(r))
+                what, val = g.send(r)
             else:
                 sql, args = val
                 _run_for_gen(cur.execute, sql, args)
@@ -79,9 +75,9 @@ def _exec(cur, g):
                     rowc = len(rs)
                 elif what == INSERT:
                     rs = cur.lastrowid
-                yd.update(*g.send((rowc, rs)))
-        except _NextIteration:
-            pass
+                what, val = g.send((rowc, rs))
+        except _NextIteration as e:
+            what, val = e.value
 
 def db_txn(pool, gen, *args, **kwargs):
     g = gen(*args, **kwargs)

@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+
 from db_txn import db_execute, db_insert, db_query, db_result, in_txn, \
                    for_recurse
 
